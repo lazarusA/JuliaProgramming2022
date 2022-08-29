@@ -2,14 +2,14 @@ using GLMakie, Markdown, MakieSlides, Random, FileIO
 include("codeColors.jl")
 #set_theme!(theme_ggplot2())
 #set_theme!()
-#themexx = Themes.TracTheme
+themexx = Themes.TracTheme
 bgcolor = :grey90
-txtcolor = :black
-themexx = Themes.MonokaiMiniTheme
-bgcolor = :grey95
-set_theme!(theme_light())
-#set_theme!(theme_dark())
-#txtcolor = :white
+#txtcolor = :black
+#themexx = Themes.MonokaiMiniTheme
+#bgcolor = :grey95
+#set_theme!(theme_light())
+set_theme!(theme_dark())
+txtcolor = :white
 function applycolors(t, colors2)
     gc = t.plots[1].plots[1][1][][1]
     for (i, newc) in enumerate(colors2[2:end])
@@ -23,6 +23,8 @@ pres = Presentation(figure_padding =  25)
 add_slide!(pres) do fig
     Label(fig[1, 1], "Makie", textsize = 100, tellwidth = false)
     Label(fig[2, 1], "The layout approach", textsize = 60, tellwidth = false)
+    Label(fig[3, 1], "Danisch & Krumbiegel, (2021). Makie.jl: Flexible high-performance data visualization for Julia.\nJournal of Open Source Software, 6(65), 3349",
+        textsize = 20, tellwidth = false, color = :dodgerblue)
     rowgap!(fig.layout, 1, Fixed(10))
     s = campixel(fig.scene)
     text!(s, "Data Visualization", position=(20, 40), space=:pixel,
@@ -136,8 +138,8 @@ for j in 1:3
     end
 end
 display(pres)
-#MakieSlides.save(joinpath(@__DIR__, "part1_slides_h_dark.pdf"), pres)
-MakieSlides.save(joinpath(@__DIR__, "part1_slides_h_light.pdf"), pres)
+MakieSlides.save(joinpath(@__DIR__, "part1_slides_h_dark.pdf"), pres)
+#MakieSlides.save(joinpath(@__DIR__, "part1_slides_h_light.pdf"), pres)
 
 reset!(pres)
 
