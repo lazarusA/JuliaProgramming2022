@@ -16,20 +16,22 @@ current_figure()
 # scatterlines(x,y)
 
 # layout positions
-
 fig = Figure()
-ax, obj = lines(fig[1,1], x, y; color = x, label =L"sin(3x)/(cos(x) +2)/x")
+ax, obj = lines(fig[1,1], x, y; color = x,
+    label =L"sin(3x)/(cos(x) +2)/x")
 scatter!(ax, x,y, color = x)
 Colorbar(fig[1,2], obj)
 Legend(fig[0,1], ax; tellwidth=false, tellheight = true)
 fig
+save("./slides/imgs/part4_1.png", current_figure())
 
 # more layout freedom, multiple axis
 function plotmulti()
     fig = Figure(resolution = (1200,800))
     ax1 = Axis(fig[1,1], xlabel = "x", ylabel = "y")
     ax2 = Axis(fig[1,2], xlabel = "x")
-    ax3 = Axis(fig[2,1:2], xlabel = "x", ylabel = "y", backgroundcolor = :black)
+    ax3 = Axis(fig[2,1:2], xlabel ="x", ylabel ="y",
+        backgroundcolor = :black)
     axs = [ax1, ax2, ax3]
     lines!(ax1, x, y; color = :black, linestyle = :dashdot,
         linewidth = 3, label = "f(x)")
@@ -40,18 +42,15 @@ function plotmulti()
         label = "f(x) empty markers")
     Label(fig[1,1], "(a)", tellwidth=false, tellheight=false,
         valign = :bottom, halign = :right,
-        font = "TeX Gyre Heros Bold",
-        textsize = 24,
+        font = "TeX Gyre Heros Bold", textsize = 24,
         padding = (3, 15, 10, 3))
     Label(fig[1,2], "(b)", tellwidth=false, tellheight=false,
         valign = :bottom, halign = :right,
-        font = "TeX Gyre Heros Bold",
-        textsize = 24,
+        font = "TeX Gyre Heros Bold", textsize = 24,
         padding = (3, 15, 10, 3))
-    Label(fig[2,1:2], "(c)", tellwidth=false, tellheight=false,
+    Label(fig[2,1:2], "(c)", tellwidth=false,tellheight=false,
         valign = :bottom, halign = :right,
-        font = "TeX Gyre Heros Bold",
-        textsize = 24,
+        font = "TeX Gyre Heros Bold", textsize = 24,
         color = :white,
         padding = (3, 15, 10, 3))
     axislegend.(axs)
@@ -59,3 +58,4 @@ function plotmulti()
     fig
 end
 plotmulti()
+save("./slides/imgs/part4_2.png", current_figure())
