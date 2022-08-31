@@ -1,6 +1,33 @@
 # JuliaProgramming2022
 
-
+## Course syllabus
+- Basics
+    - REPL
+    - Pkg
+    - Performance
+    - Revise
+    - BenchmarkTools
+- Data Visualization
+    - Makie, Layouts
+    - Axis, 2d plots
+    - Axis3, 3d plots (no zoom available)
+    - LScene, 3d plots 
+    - Mixing (2d and 3d)
+    - Reading data sets and plotting
+    - GeoMakie and projections
+- Functional programming
+    - Multiple dispatch
+    - Differential equations
+    - Flux
+    - Optim
+    - ForwardDiff/Zygote
+- Data Handling
+    - EarthDataLab
+    - YAXArrays
+    - DataFrames
+    - ArchGDAL
+    - Zarr
+    - Rasters
 
 
 ## Selection of online resources to start Julia 
