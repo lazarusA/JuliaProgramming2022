@@ -9,17 +9,9 @@ include("codeColors.jl")
 #txtcolor = :grey
 # light theme
 txtcolor = :orangered
-themexx = Themes.MonokaiMiniTheme
+themexx = Themes.DefaultTheme
 bgcolor = :grey95
 set_theme!(theme_light())
-
-function applycolors(t, colors2)
-    gc = t.plots[1].plots[1][1][][1]
-    for (i, newc) in enumerate(colors2[2:end])
-        gc.colors.sv[i+1] = newc
-    end
-    notify(t.plots[1].plots[1][1])
-end
 
 pres = Presentation(figure_padding =  25)
 add_slide!(pres) do fig
@@ -70,14 +62,13 @@ add_slide!(pres) do s
     
         axcode = Axis(fig1[j][1,1], height = hs, tellheight = false, 
             backgroundcolor = bgcolor)
-        t = text!(axcode, strxxo, color = colorsxxo[1], textsize = 12,
+        t = text!(axcode, strxxo, color = [colorsxxo,], textsize = 12,
             position = (0.025,0.98),
             align = (:left, :top), space= :relative,
             font = "mono",
             )
         hidedecorations!(axcode)
         hidespines!(axcode)
-        applycolors(t, colorsxxo)
     end
     colsize!(s.layout, 1, Auto(1))
     colgap!(s.layout, 1)
@@ -96,3 +87,14 @@ end
 #MakieSlides.save(joinpath(@__DIR__, "part6_slides_h_dark.pdf"), pres)
 MakieSlides.save(joinpath(@__DIR__, "part6_slides_h_light.pdf"), pres)
 reset!(pres)
+
+#=
+# old hack
+function applycolors(t, colors2)
+    gc = t.plots[1].plots[1][1][][1]
+    for (i, newc) in enumerate(colors2[2:end])
+        gc.colors.sv[i+1] = newc
+    end
+    notify(t.plots[1].plots[1][1])
+end
+=#
