@@ -24,3 +24,13 @@ heatmap(lon, lat, d;
     colormap =:seaborn_icefire_gradient)
 
 # looks ok, but there is also something there.
+ds = d[:, end:-1:1]
+mesh(Sphere(Point3f(0), 1); color = ds'[end:-1:1,:])
+
+fig = Figure()
+ax = LScene(fig[1,1], show_axis=false)
+mesh!(ax, Sphere(Point3f(0), 0.99); color = (:white,0.8),
+    transparency = true
+    )
+mesh!(ax, Sphere(Point3f(0), 1); color = ds'[end:-1:1,:])
+fig
