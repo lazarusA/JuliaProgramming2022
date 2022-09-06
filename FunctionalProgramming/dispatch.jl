@@ -75,6 +75,11 @@ function run_evolution(x::Vector; s0=0.0, a=0.5)
 
 end
 
+# Overview of differential equation amd automatic differentiation packages
+
+
+
 # Preview for tomorrow: Dealing with Zarr, NetCDF and DiskArrays
+
 
 
