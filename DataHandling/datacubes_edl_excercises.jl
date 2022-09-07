@@ -1,15 +1,15 @@
+# Recipe for writing a mapCube function
+
+# 1.) what data does my function need to see 
+# at the same time? -> InDims dimensions
+    
+# 2.) what dimensions should my output have? 
+# -> OutDims dimensions
+    
+# 3.) what shape is xin? -> derive from order of InDims, subset / iterate accordingly
 
 
-
-
-
-
-
-
-
-
-
-
+### Excercises 
 
 # 1) 
 # Calculate the temporal and spatial variance (separately) 

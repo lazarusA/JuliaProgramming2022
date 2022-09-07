@@ -1,5 +1,21 @@
 
-### download data 
+# YAXArrays can handle many different data formats. 
+# We will look at some examples on Day 4. 
+
+# You can access the online Earth Data Cube 
+# directly with the function esdc, or use the 
+# EarthDataLab infrastructure to load your own data, 
+# here e. g. some GPP data downloaded from the 
+# MPI server. 
+# To prepare, please
+#
+# (1) download the GPP data from the ftp server below, and
+#
+# (2) download the regional cube for Germany 
+# (or your favourite mid-sized country)
+
+
+## download data 
 using EarthDataLab
 using YAXArrays
 using YAXArrays.Datasets: open_mfdataset # open multifile dataset
@@ -15,6 +31,11 @@ for yr in 2001:2010
 end
 
 ### download part of the EDL cube
+# The EDL cube is a collection of 75 variables. 
+# Attention: not all datasets span the whole 
+# temporal range!
+
+# https://www.earthsystemdatalab.net/
 
 c = esdc()
 

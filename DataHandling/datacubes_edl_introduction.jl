@@ -3,16 +3,26 @@ using YAXArrays.Datasets: open_mfdataset
 using ProgressMeter
 using NetCDF
 using Plots
+using Dates
+using Plots
+
+# https://github.com/JuliaDataCubes
+
+#######################
+### Datacubes
+#######################
 
 # load a dataset from disk
 
-#cgermany = Cube(open_dataset("../data/germanycube.zarr"))
+# pointer to the dataset
+ds_germany = open_dataset("../data/germanycube.zarr")
 
+# make a cube out of it (a YAXArray)
+cgermany = Cube(ds_germany)
+
+# opening multi-file dataset 
 fluxcom_gpp = open_mfdataset("../data/GPP.*.nc")
-
 gpp = Cube(fluxcom_gpp)
-
-using Plots
 
 plot(gpp[lon=30, lat=50][:,1:2])
 
@@ -22,21 +32,46 @@ Plots.heatmap(replace(gpp.data[:,:,1,1],-9999=>NaN))
 # transpose and count backwards to get the map correctly
 Plots.heatmap(replace(gpp.data[:,:,1,1]'[end:-1:1,:],-9999=>NaN))
 
-### Datacubes
-
-#c = esdc()
 c = Cube(open_dataset("../data/germanycube.zarr"))
 
 # Cube fields 
+# Cubes have different fields: 
+# ´data´ to access their data, 
+# ´axes´ to access their axes.
+
+# 1.) the data inside a Cube is a DiskArray
 c.data
 
+# 2.) Datacube / YAXArray: named axes + operations  
 c.axes
 
 # get an axis by name
 getAxis("Variable",c)
 
 # get axis values
-show(getAxis("Variable",c).values)
+getAxis("Variable",c).values
+
+# creating axes + cubes 
+
+
+dates = collect(Date(2000,1,1):Day(1):Date(2000,12,31)) 
+ax1 = RangeAxis("Time", dates)
+
+ax2 = CategoricalAxis("Variable",["var1","var2"])
+ax2.values
+data = randn((length(ax1),length(ax2)))
+
+cnew = YAXArray([ax1, ax2], data)
+cnew.data
+cnew.axes
+
+#######################
+### Subsetting + concatenating cubes
+#######################
+
+# Your data is not loaded into memory, but read from disk.
+# Subsetting happens lazily, the data is not copied 
+# but the new cube is just a pointer to the subset of the disk. 
 
 # slicing in different dimensions
 csmall = c[
@@ -64,34 +99,104 @@ getAxis(:Variable, llcube).values
 
 plot(getAxis(:Time,llcube).values, llcube[1,:,3:4])
 
+# pass a list of cubes and an axis to concatenate along
+c_concat = concatenatecubes(
+    [c[var="gross_primary_productivity"],
+    c[var="net_ecosystem_exchange"]],
+    CategoricalAxis("Variable",["GPP","NEE"]))
+
+#######################
+### Computations
+#######################
+
+### 1.) Cubes can be treated like datasets...
+# access DiskArray at c.data 
+
+# YAXArray cube is a container for DiskArray dataset 
+# containing additional information (named axes etc)
+c.data 
+
+# computation directly on datasets 
+# not ideal: you lose your axes
+# we circumvent  this below 
+c[var="gross"].data .- c[var="net"].data 
+
+
+### 2.) Elementwise operations on cubes 
+
+# out temperature data is in Kelvin 
+extrema(c[var="air_temperature_2m"].data)
+
+# transform to celcius
+function kelvintocelcius(x)
+    x - 273.15
+end
+
+c_celsius = map(kelvintocelcius, c[var="air_temperature_2m"])
+#extrema(c_celsius.data)
+
+# same operation with other notations:
+c_celsius = map(x -> x - 273.15 , c[var="air_temperature_2m"])
+
+c_celsius = map(c[var="air_temperature_2m"]) do x
+	x - 273.15
+end
+
+
+### 3.) Built-in functions
+
+# The EarthDataLab is basesd on YAXArrays.
+# It implements standard operations
+# needed for earth science data cubes. 
+# https://github.com/JuliaDataCubes/EarthDataLab.jl
+
+# It also hosts a data cube accessible via 
+# c = esdc()
+
+### Mean Seasonal Cycle 
 c_msc = getMSC(cgermany)
+
 plot(c_msc[lon = 10,lat = 50, 
     var="gross_primary_productivity"].data)
+
+
 # also median seasonal cycle
 getMedSC(cgermany)
 
 plot(getAxis(:MSC,c_msc).values, c_msc[:,10,10,:])
 
+# anomalies from Mean seasonal cycle 
 c_anom = removeMSC(cgermany)
 
 plot(getAxis(:Time,c_anom).values, c_anom[:,10,10,:],
     layout=(4,1),label=permutedims(c_anom.Variable.values))
 
-#?concatenatecubes
 
-#?gapFillMSC
+gapFillMSC
 
-#gapfillpoly
+gapfillpoly
 
-c
+normalizeTS
 
-c[var="gross"].data .- c[var="net"].data 
+
+# 4.) Cube operations with mapslices & mapCube
+
+# apply functions on cube dimensions / named axes
+# this way you keep + transform the axis information 
 
 using Statistics
 
 methods(mapslices)
 
 #?mapslices
+
+## mapslices
+# mapslices(f, A; dims = d) transforms a given dataset A 
+# by a function f along dimension d. Notice that 
+# the input dimension disappears from the output cube. 
+# Mapslices automatically iterates over all other 
+# dimensions (Lat, Lon, Variable) independently and 
+# returns them again.
 
 # compute the temporal mean of each variable over regional cube
 c_tempmean = mapslices(mean ∘ skipmissing, cgermany; dims="Time")
@@ -101,21 +206,32 @@ heatmap(replace(c_tempmean.data, missing => NaN))
 c_spatialmean = mapslices(mean ∘ skipmissing, cgermany, dims = ("lon","lat"))
 
 c_mean = mapslices(mean ∘ skipmissing, cgermany, dims = ("lon","lat","time")) 
-# attention, this might not work for larger cubes (chunk does not fit into memory)... see OnlineStats with Fabian?
-
-c_mean.data
-
-c_msc
+# attention, this might not work for larger cubes (chunk have to fit into memory)
 
 c_latmsc = mapslices(mean ∘ skipmissing, c_msc; dims="lon")
 
 heatmap(c_latmsc.data[:,:,2]')
+
+
+### mapCube
 
 #?mapCube
 
 # mapCube is similar to mapslices, 
 # but takes explicit input dimensions (InDims) 
 # and output dimensions (outDims)
+
+
+# mapCube is similar to mapslices: It also transforms 
+# a given dataset by a function along specified 
+# dimensions, but it is more customizable than 
+# mapslices. You can specify several input and output 
+# dimensions, e. g. if you want to do an aggregation 
+# over time and variable. The input dimensions are 
+# replaced by the output dimensions in the output cube. 
+# Like mapslices, mapCube automatically iterates over 
+# all other dimensions independently and returns them 
+# again.
 
 id = InDims("Time")
 od = OutDims()
@@ -145,6 +261,16 @@ c_cor = mapCube(cor,
 
 #?OutDims
 
+### Writing your own function for mapCube
+# The function mapCube expects is of type 
+# f(xout, xin; kwargs ...), 
+# i. e. the output array is internally passed as 
+# the first argument, then comes the input array. 
+# If you want to include a function of type 
+# f(xin; kwargs...), 
+# use the keyword inplace = false (less memory efficient).
+
+
 # Let's say we want the two variables in one cube and write a function that can access them there. 
 ct = cgermany[variable=["air_temperature","terrestrial_ecosystem_respiration"]]
 
@@ -168,6 +294,11 @@ function cubecor(xin)
     return cor(xin[idx,1],xin[idx,2])
 end
 
+### Checklist with errors or all missing output
+# dimensions of data correct?
+# catch statement for errors concerning all missing data?
+# xout[:] needs to be assigned with [:] (you are writing into a preallocated array)
+
 # Think about all the data you need to access at once to your calculation:
 # The input dimensions to calculate temporal correlation need to be "Time" and "Variable"
 id = InDims("Time", "Variable") # the order of dimensions defines the size of xin! -> time in rows, var in cloumns
@@ -182,6 +313,7 @@ ct_cor.data
 
 Plots.heatmap(replace(ct_cor.data'[end:-1:1,:],missing=>NaN))
 
+### Customizing Cube Dimensions
 # We write a correlation function `cubecor` that calculates the correlation between two columns of input `xin`.
 
 function cubesummary(xout, xin)
@@ -205,3 +337,18 @@ ct_cor2 = mapCube(cubesummary, ct, indims = id, outdims = od)
 #?CategoricalAxis
 
 
+#######################
+### Make Moving Window Computations
+#######################
+
+function movingmean(xout, xin)
+    xout .= mean(xin)
+end
+
+function movingmean(cube::YAXArray)
+    indims = InDims(MovingWindow("lat", 1,1),MovingWindow("lon", 1,1))
+    outdims=OutDims()
+    mapCube(movingmean, cube; indims=indims, outdims=outdims)
+end
+
+movingavgprange = movingmean(prange_italy)
