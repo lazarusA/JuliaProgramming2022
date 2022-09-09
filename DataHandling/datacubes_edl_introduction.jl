@@ -1,4 +1,5 @@
 using EarthDataLab
+using YAXArrays
 using YAXArrays.Datasets: open_mfdataset
 using ProgressMeter
 using NetCDF
@@ -21,13 +22,16 @@ ds_germany = open_dataset("../data/germanycube.zarr")
 cgermany = Cube(ds_germany)
 
 # opening multi-file dataset 
+@edit open_mfdataset("../data/GPP.*.nc")
 fluxcom_gpp = open_mfdataset("../data/GPP.*.nc")
 gpp = Cube(fluxcom_gpp)
+
+extrema(skipmissing(gpp.data[:,:,1,1]))
 
 plot(gpp[lon=30, lat=50][:,1:2])
 
 # Plot the first timestep of GPP
-Plots.heatmap(replace(gpp.data[:,:,1,1],-9999=>NaN))
+Plots.heatmap(replace(gpp.data[:,:,1,1],missing=>NaN))
 
 # transpose and count backwards to get the map correctly
 Plots.heatmap(replace(gpp.data[:,:,1,1]'[end:-1:1,:],-9999=>NaN))
@@ -47,6 +51,7 @@ c.axes
 
 # get an axis by name
 getAxis("Variable",c)
+getAxis("lon",c)
 
 # get axis values
 getAxis("Variable",c).values
@@ -76,6 +81,12 @@ cnew.axes
 # slicing in different dimensions
 csmall = c[
     var = ["gross"],
+    lon = (10,11),
+    lat = (50,51),
+    time = 2000:2010]
+
+    c[
+    var = "gross",
     lon = (10,11),
     lat = (50,51),
     time = 2000:2010]
@@ -136,7 +147,7 @@ c_celsius = map(kelvintocelcius, c[var="air_temperature_2m"])
 #extrema(c_celsius.data)
 
 # same operation with other notations:
-c_celsius = map(x -> x - 273.15 , c[var="air_temperature_2m"])
+c_celsius = map(x -> x - 273.15, c[var="air_temperature_2m"])
 
 c_celsius = map(c[var="air_temperature_2m"]) do x
 	x - 273.15
@@ -154,14 +165,14 @@ end
 # c = esdc()
 
 ### Mean Seasonal Cycle 
-c_msc = getMSC(cgermany)
+c_msc = getMSC(c)
 
 plot(c_msc[lon = 10,lat = 50, 
     var="gross_primary_productivity"].data)
 
 
 # also median seasonal cycle
-getMedSC(cgermany)
+getMedSC(c)
 
 plot(getAxis(:MSC,c_msc).values, c_msc[:,10,10,:])
 
@@ -199,13 +210,13 @@ methods(mapslices)
 # returns them again.
 
 # compute the temporal mean of each variable over regional cube
-c_tempmean = mapslices(mean ∘ skipmissing, cgermany; dims="Time")
+c_tempmean = mapslices(mean ∘ skipmissing, c; dims="Time")
 
-heatmap(replace(c_tempmean.data, missing => NaN))
+heatmap(replace(c_tempmean[var="air"].data, missing => NaN))
 
 c_spatialmean = mapslices(mean ∘ skipmissing, cgermany, dims = ("lon","lat"))
 
-c_mean = mapslices(mean ∘ skipmissing, cgermany, dims = ("lon","lat","time")) 
+#c_mean = mapslices(mean ∘ skipmissing, cgermany, dims = ("lon","lat","time")) 
 # attention, this might not work for larger cubes (chunk have to fit into memory)
 
 c_latmsc = mapslices(mean ∘ skipmissing, c_msc; dims="lon")
@@ -237,21 +248,12 @@ id = InDims("Time")
 od = OutDims()
 #od = OutDims(path="./mgpp.zarr", backend = :zarr, overwrite=true) # if you want to save the output array to disk
 
-r = mapCube(mean, gpp[region="Europe"], indims = id, outdims = od, inplace=false)
+r = mapCube(mean, c, indims = id, outdims = od, inplace=false)
 
 # Two input cubes - note that indims needs to be adjusted to also contain two indims. there can be different between cubes
 
 c_cor = mapCube(cor, 
-    (cgermany[variable="air_temperature"], cgermany[variable="terrestrial_ecosystem_respiration"]),
-    indims = (id, id),
-    outdims = od,
-    inplace = false
-)
-
-# Two input cubes - note that indims needs to be adjusted to also contain two indims. there can be different between cubes
-
-c_cor = mapCube(cor, 
-    (cgermany[variable="air_temperature"], cgermany[variable="terrestrial_ecosystem_respiration"]),
+    (c[variable="air_temperature"], c[variable="terrestrial_ecosystem_respiration"]),
     indims = (id, id),
     outdims = od,
     inplace = false
@@ -271,10 +273,13 @@ c_cor = mapCube(cor,
 # use the keyword inplace = false (less memory efficient).
 
 
-# Let's say we want the two variables in one cube and write a function that can access them there. 
-ct = cgermany[variable=["air_temperature","terrestrial_ecosystem_respiration"]]
+# Let's say we want the two variables in one cube 
+# and write a function that can access them there. 
+ct = c[variable=["air_temperature",
+    "terrestrial_ecosystem_respiration"]]
 
-# We write a correlation function `cubecor` that calculates the correlation between two columns of input `xin`.
+# We write a correlation function `cubecor` that calculates 
+# the correlation between two columns of input `xin`.
 
 function cubecor(xout, xin)
     # index of pairwise complete observations
@@ -283,6 +288,18 @@ function cubecor(xout, xin)
     # correlation assigned to xout. note the [:] access is important!
     xout[:] .= cor(xin[idx,1],xin[idx,2])
 end
+
+#ated array)
+
+# Think about all the data you need to access at once to your calculation:
+# The input dimensions to calculate temporal correlation need to be "Time" and "Variable"
+id = InDims("Time", "Variable") # the order of dimensions defines the size of xin! -> time in rows, var in cloumns
+
+# Think about the dimension of your output, here: one number. So OutDims is empty!
+od = OutDims()
+
+# now put it into mapCube:
+ct_cor = mapCube(cubecor, ct, indims = id, outdims = od) 
 
 # Just for demonstration, a function used with inplace = false (no xout)
 
@@ -299,15 +316,8 @@ end
 # catch statement for errors concerning all missing data?
 # xout[:] needs to be assigned with [:] (you are writing into a preallocated array)
 
-# Think about all the data you need to access at once to your calculation:
-# The input dimensions to calculate temporal correlation need to be "Time" and "Variable"
-id = InDims("Time", "Variable") # the order of dimensions defines the size of xin! -> time in rows, var in cloumns
-
-# Think about the dimension of your output, here: one number. So OutDims is empty!
-od = OutDims()
-
 # now put it into mapCube:
-ct_cor = mapCube(cubecor, ct, indims = id, outdims = od) 
+ct_cor = mapCube(cubecor, ct, indims = id, outdims = od, inplace=false) 
 
 ct_cor.data
 
@@ -351,4 +361,8 @@ function movingmean(cube::YAXArray)
     mapCube(movingmean, cube; indims=indims, outdims=outdims)
 end
 
-movingavgprange = movingmean(prange_italy)
+movingavgprange = movingmean(c)
+
+## save cubes 
+
+savecube(c,"outcube")
