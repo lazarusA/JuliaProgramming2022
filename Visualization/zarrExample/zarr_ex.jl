@@ -22,6 +22,9 @@ cCube = map(x -> x-273.15, kelvinCube)
 idx = Observable(1)
 # update data
 d = @lift(circshift(cCube.data[:, :, $idx], (192,1)))
+mx = maximum(cCube.data[:, :, :])
+mn = minimum(cCube.data[:, :, :])
+colorrange = (mn, mx)
 # update properties
 color = @lift([$d[i, j] for (i, _) in enumerate(nlon) for (j, _) in enumerate(lat)])
 markersize = @lift(Vec3f.(δx - 0.0 * δx, δy - 0.0 * δy, $color))
@@ -32,8 +35,8 @@ set_theme!(theme_black(), resolution=(1600,900))
 fig = Figure()
 ax1 = LScene(fig[1,1], show_axis=false)
 ax2 = LScene(fig[1,2], show_axis=false)
-meshscatter!(ax1, ps; color, marker, markersize, colormap)
-meshscatter!(ax2, ps; color, marker, markersize, colormap)
+meshscatter!(ax1, ps; color, marker, markersize, colormap, colorrange)
+meshscatter!(ax2, ps; color, marker, markersize, colormap, colorrange)
 Label(fig[1,1:2, BottomLeft()], "CMIP6/ScenarioMIP/DKRZ/MPI-ESM1-2-HR",
     halign=:left, tellwidth=false, textsize= 24, color = :grey)
 Label(fig[1,1:2, Top()], @lift("Near-Surface Air Temperature, $(tempo[$idx])"), textsize= 32)
@@ -41,7 +44,9 @@ Label(fig[1,1:2, BottomRight()], "Visualization by Lazaro Alonso",
     textsize= 24, color = 1.65colorant"grey", tellwidth=false,halign=:right)
 Label(fig[1,1:2, Bottom()], "using GLMakie, Zarr, YAXArrays", color = :white)
 fig
-record(fig, "t2m_MPI_ESM1_2_HR_2030_01.mp4", profile = "main") do io
+
+
+record(fig, "t2m_MPI_ESM1_2_HR_2030_01_fix.mp4", profile = "main") do io
     for i in 1:720
         idx[] = i
         recordframe!(io)  # record a new frame
