@@ -42,12 +42,12 @@ c = esdc()
 cgermany = c[
   region = "Germany",
   var = ["gross", "net_ecosystem", "air_temperature_2m", "terrestrial_ecosystem"],
-  time = 2000:2010
+  time = 2005:2010
 ]
 
 # save cube to disk
 # again, you need a '../data' directory or change the path for saving!
 
-savecube(cgermany,"../data/germanycube.zarr",
+savecube(cgermany,"../data/germanycube.zarr", overwrite=true, 
   chunksize=Dict("lon"=>20,"lat"=>20,"time"=>92)) # Chunksize definition is optional
 

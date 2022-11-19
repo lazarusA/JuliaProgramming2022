@@ -1,10 +1,10 @@
 using ESDL, Zarr, YAXArrays
 
-c = Cube("data/germanycube.zarr/")
+c = Cube("../data/germanycube.zarr/")
 
 c = c[time=2001:2010, var = "air_temp"]
 
-t = CubeTable(tair = c, include_axes=("lon","lat","time"))
+t = CubeTable(tair = c)
 
 for row in Iterators.take(t,10)
     println(row)
